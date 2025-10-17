@@ -1,0 +1,16 @@
+{
+    "name": "model",
+    "model":{
+        "hidden_size": 50,
+        "dropout": 0.2,
+        "learning_rate": 1e-4,
+        "epochs": 50000
+    },
+    "data": "../data/carData_3.csv",
+    "norm_params": {
+        "directory": "norm_params",
+        "mean": "data_mean_new_3.npy",
+        "std": "data_std_new_3.npy"
+    },
+    "result_png": "result.png"
+}
