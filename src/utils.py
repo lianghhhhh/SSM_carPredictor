@@ -38,7 +38,7 @@ def computeTarget(u_tensor, matrix_outputs, x_data):
     D = matrix_outputs[:, 24:25].reshape(-1, 1, 1)  # 1x1 matrix D
 
     delta_x = torch.bmm(A, x_data.unsqueeze(2)) + torch.bmm(B, u_tensor.unsqueeze(2))  # x' = Ax + Bu
-    y_pred = torch.bmm(C, delta_x) + torch.bmm(D, u_tensor.unsqueeze(2))  # y = Cx + Du
+    y_pred = torch.bmm(C, x_data.unsqueeze(2)) + torch.bmm(D, u_tensor.unsqueeze(2))  # y = Cx + Du
 
     next_x = delta_x.squeeze(2) + x_data  # next state x = x + delta_x
     y_pred = y_pred.squeeze(2)  # reshape y_pred to match y_tensor
