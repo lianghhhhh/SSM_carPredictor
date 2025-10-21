@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 
 class CarPredictor(nn.Module):
-    def __init__(self, input_size=2, hidden_size=50, output_size=25, dropout=0.2):
+    def __init__(self, input_size=5, hidden_size=128, output_size=25, dropout=0.2):
         super().__init__()
         self.model = nn.Sequential(
             nn.Linear(input_size, hidden_size),

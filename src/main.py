@@ -13,7 +13,7 @@ def selectMode():
     mode = input("Enter mode (1 or 2): ")
     return mode
 
-def trainModel(model, u_tensor, y_tensor, epochs=100, learning_rate=0.001, name="model"):
+def trainModel(model, u_tensor, y_tensor, x_tensor, epochs=100, learning_rate=0.001, name="model"):
     if os.path.exists(f'../{config["name"]}.pth'):
         print(f"Model {config['name']} already exists. Loading existing model.")
         model.load_state_dict(torch.load(f'../{config["name"]}.pth'))
@@ -24,8 +24,9 @@ def trainModel(model, u_tensor, y_tensor, epochs=100, learning_rate=0.001, name=
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    input_data = torch.cat((u_tensor, y_tensor), dim=1).to(device)
-    x_data = torch.zeros(1, 4).to(device) # initial state x:[0,0,0,0]
+    x_temp = x_tensor.view(x_tensor.size(0), -1) # flatten x_tensor
+    input_data = torch.cat((u_tensor, x_temp), dim=1).to(device)
+    x_tensor = x_tensor.to(device)
     u_tensor = u_tensor.to(device)
     y_tensor = y_tensor.to(device)
     log_dir = os.path.join(os.path.dirname(__file__), '..', 'logs', name)
@@ -35,16 +36,16 @@ def trainModel(model, u_tensor, y_tensor, epochs=100, learning_rate=0.001, name=
     for epoch in range(epochs):
         model.train()
         optimizer.zero_grad()
-        for i in range(input_data.size(0)):
-            output = model(input_data[i:i+1])  # Send one data point at a time
-            y_pred, next_x = computeTarget(u_tensor[i:i+1], output, x_data)
-            if i >= input_data.size(0) - 1:
-                break
-            x_data = y_tensor[i].unsqueeze(0).repeat(1, 4)  # next state x is the actual current output
-            loss_1 = criterion(y_pred, y_tensor[i:i+1])
-            loss_2 = criterion(next_x, x_data)
-            loss = loss_1 + loss_2
-            loss.backward()
+        outputs = model(input_data)
+        y_pred, next_x = computeTarget(u_tensor, outputs, x_tensor)
+        loss_1 = criterion(y_pred, y_tensor)
+        # remove first data point from x_tensor
+        x_tensor_temp = x_tensor[1:, :, :]
+        # remove last data point from next_x
+        next_x_temp = next_x[:-1, :, :]
+        loss_2 = criterion(next_x_temp, x_tensor_temp)
+        loss = loss_1 + loss_2
+        loss.backward()
         optimizer.step()
         writer.add_scalar('Loss/train', loss.item(), epoch+1)
 
@@ -59,43 +60,43 @@ def trainModel(model, u_tensor, y_tensor, epochs=100, learning_rate=0.001, name=
     print(f'Model saved as {name}.pth')
 
 
-def runInference(model, u_tensor, y_tensor, name="model"):
+def runInference(model, u_tensor, y_tensor, x_tensor, name="model"):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model.eval()
-    input_data = torch.cat((u_tensor, y_tensor), dim=1).to(device)
-    x_data = torch.zeros(u_tensor.size(0), 4).to(device)  # initial state x:[0,0,0,0]
+    x_temp = x_tensor.view(x_tensor.size(0), -1) # flatten x_tensor
+    input_data = torch.cat((u_tensor, x_temp), dim=1).to(device)
+    x_tensor = x_tensor.to(device)
+    x_data = x_tensor[0:1, :, :]  # start with the first
     u_tensor = u_tensor.to(device)
     y_tensor = y_tensor.to(device)
-    y_preds = []
+
 
     with torch.no_grad():
-        for i in range(input_data.size(0)):
-            output = model(input_data[i:i+1])  # Send one data point at a time
-            y_pred, next_x = computeTarget(u_tensor[i:i+1], output, x_data)
-            y_preds.append(y_pred.item())
-            x_data = next_x
-            # Update x_data for the next iteration
+        output = model(input_data)  # Send one data point at a time
+        y_pred, next_x = computeTarget(u_tensor, output, x_tensor)
 
-    print(output)
-
+    difference = y_pred - y_tensor
+    # get the mean of each output column
+    mean_output = torch.mean(output, dim=0)
+    print(mean_output)
 
     plt.figure(figsize=(10,5))
-    plt.plot(y_tensor.cpu().numpy(), label='Actual')
-    plt.plot(y_preds, label='Predicted')
+    plt.plot(difference.cpu().numpy(), label='Difference (y - y_pred)', color='red')
     plt.legend()
-    plt.title('Inference Results')
+    plt.title('Inference Difference')
     plt.xlabel('Time Step')
-    plt.ylabel('Output')
-    plt.show()
+    plt.ylabel('Difference')
+    plt.savefig(f'../{name}.png')
 
 
 if __name__ == "__main__":
     mode = selectMode()
-    u_val, y_val = getInputData()
+    u_val, y_val, x_val = getInputData()
     config = loadConfig()
     u_tensor = torch.tensor(u_val).float().unsqueeze(1)
     y_tensor = torch.tensor(y_val).float().unsqueeze(1)
+    x_tensor = torch.tensor(x_val).float()
     model = CarPredictor(
         hidden_size=config['model']['hidden_size'],
         dropout=config['model']['dropout']
@@ -103,9 +104,9 @@ if __name__ == "__main__":
 
     if mode == "1":
         print("Training model.")
-        trainModel(model, u_tensor, y_tensor, config['model']['epochs'], config['model']['learning_rate'], config['name'])
+        trainModel(model, u_tensor, y_tensor, x_tensor, config['model']['epochs'], config['model']['learning_rate'], config['name'])
 
     elif mode == "2":
         print("Inference")
         model.load_state_dict(torch.load(f'../{config["name"]}.pth'))
-        runInference(model, u_tensor, y_tensor, config['name'])
+        runInference(model, u_tensor, y_tensor, x_tensor, config['name'])
