@@ -4,14 +4,31 @@ import torch
 import torch.nn as nn
 
 class CarPredictor(nn.Module):
-    def __init__(self, input_size=5, hidden_size=128, output_size=25, dropout=0.2):
+    def __init__(self, u_size=1, x_size=4, hidden_size=128, output_size=25, dropout=0.2):
         super().__init__()
+        self.u_size = u_size
+        self.x_size = x_size
+        self.input_size = x_size + u_size
         self.model = nn.Sequential(
-            nn.Linear(input_size, hidden_size),
+            nn.Linear(self.input_size, hidden_size),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_size, output_size)
         )
 
-    def forward(self, x):
-        return self.model(x)
+        self.layer_norm = nn.LayerNorm(output_size)
+
+    def forward(self, u, x):
+        x_flat = x.view(-1, self.x_size)
+        u_flat = u.view(-1, self.u_size)
+        input_data = torch.cat((u_flat, x_flat), dim=1)
+
+        outputs = self.model(input_data)
+        outputs = self.layer_norm(outputs)
+
+        A = outputs[:, :self.x_size * self.x_size].reshape(-1, self.x_size, self.x_size)
+        B = outputs[:, self.x_size * self.x_size:self.x_size * self.x_size + self.x_size * self.u_size].reshape(-1, self.x_size, self.u_size)
+        C = outputs[:, self.x_size * self.x_size + self.x_size * self.u_size:self.x_size * self.x_size + self.x_size * self.u_size + self.u_size * self.x_size].reshape(-1, self.u_size, self.x_size)
+        D = outputs[:, -self.u_size:].reshape(-1, self.u_size, self.u_size)
+
+        return A, B, C, D
