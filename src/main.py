@@ -1,12 +1,11 @@
 # state space model based neural network model for car state prediction
 import os
 import torch
+import numpy as np
+import matplotlib.pyplot as plt
 from carPredictor import CarPredictor
 from torch.utils.tensorboard import SummaryWriter
 from utils import getInputData, loadConfig, computeTarget, angleToDegree
-import matplotlib.pyplot as plt
-from sklearn.preprocessing import StandardScaler
-import numpy as np
 
 def selectMode():
     print("Select mode:")
@@ -67,7 +66,6 @@ def runInference(model, u_tensor, x_tensor, x_next_tensor, x_scaler, name="model
     model.eval()
     x_tensor = x_tensor.to(device)
     u_tensor = u_tensor.to(device)
-    # y_tensor = y_tensor.to(device)
     x_pred_list = []
 
     with torch.no_grad():
@@ -115,57 +113,6 @@ if __name__ == "__main__":
     mode = selectMode()
     config = loadConfig()
     train_u, train_x, train_x_next, test_u, test_x, test_x_next, u_scaler, x_scaler = getInputData(config['data'])
-    # train_u = torch.tensor(train_u).float().unsqueeze(1)
-    # train_y = torch.tensor(train_y).float().unsqueeze(1)
-    # train_x = torch.tensor(train_x).float()
-    # train_x_next = torch.tensor(train_x_next).float()
-    # test_u = torch.tensor(test_u).float().unsqueeze(1)
-    # test_y = torch.tensor(test_y).float().unsqueeze(1)
-    # test_x = torch.tensor(test_x).float()
-
-    # # normalization
-    # # 2. Reshape data for scalers (N, features)
-    # # x data is (N, 4, 1), reshape to (N, 4)
-    # train_x_np = np.array(train_x).reshape(-1, 4)
-    # train_x_next_np = np.array(train_x_next).reshape(-1, 4)
-    # test_x_np = np.array(test_x).reshape(-1, 4)
-    
-    # # u/y data are (N,), reshape to (N, 1)
-    # train_u_np = np.array(train_u).reshape(-1, 1)
-    # train_y_np = np.array(train_y).reshape(-1, 1)
-    # test_u_np = np.array(test_u).reshape(-1, 1)
-    # test_y_np = np.array(test_y).reshape(-1, 1)
-
-
-    # # 3. Create and FIT scalers *ONLY ON TRAINING DATA*
-    # u_scaler = StandardScaler()
-    # y_scaler = StandardScaler()
-    # x_scaler = StandardScaler()
-
-    # u_scaler.fit(train_u_np)
-    # y_scaler.fit(train_y_np)
-    # x_scaler.fit(train_x_np) # x and x_next use the same scaler
-
-    # # 4. TRANSFORM all data (train and test)
-    # train_u_scaled = u_scaler.transform(train_u_np)
-    # train_y_scaled = y_scaler.transform(train_y_np)
-    # train_x_scaled = x_scaler.transform(train_x_np)
-    # train_x_next_scaled = x_scaler.transform(train_x_next_np)
-    
-    # test_u_scaled = u_scaler.transform(test_u_np)
-    # test_y_scaled = y_scaler.transform(test_y_np)
-    # test_x_scaled = x_scaler.transform(test_x_np)
-
-    # # 5. Convert to Tensors
-    # train_u = torch.tensor(train_u_scaled).float()
-    # train_y = torch.tensor(train_y_scaled).float()
-    # test_u = torch.tensor(test_u_scaled).float()
-    # test_y = torch.tensor(test_y_scaled).float()
-
-    # # Reshape x tensors back to (N, 4, 1) for the model
-    # train_x = torch.tensor(train_x_scaled).float().unsqueeze(-1)
-    # train_x_next = torch.tensor(train_x_next_scaled).float().unsqueeze(-1)
-    # test_x = torch.tensor(test_x_scaled).float().unsqueeze(-1)
 
     train_u = torch.tensor(train_u).float()
     train_x = torch.tensor(train_x).float()

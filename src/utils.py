@@ -7,37 +7,7 @@ from sklearn.preprocessing import StandardScaler
 
 def getInputData(data_path):
     u_val = []
-    new_u_val = []
-    y_val = []
     x_val = []
-
-    # with open('C://Users//selen//OneDrive//Desktop//master//SSM_carPredictor//left_wheel_data.csv', mode='r', encoding='utf-8') as file:
-    #     reader = csv.reader(file)
-    #     next(reader)  # Skip header
-    #     for row in reader:
-    #         u_val.append(float(row[1]))
-
-    # with open('C://Users//selen//OneDrive//Desktop//master//SSM_carPredictor//newCarData.csv', mode='r', encoding='utf-8') as file:
-    #     reader = csv.reader(file)
-    #     next(reader)  # Skip header
-    #     for row in reader:
-    #         time = int(float(row[0]))
-    #         y_val.append(float(row[1]))
-    #         new_u_val.append(float(u_val[time]))
-
-    # with open('C://Users//selen//OneDrive//Desktop//master//SSM_carPredictor//x_data.csv', mode='r', encoding='utf-8') as file:
-    #     reader = csv.reader(file)
-    #     next(reader)  # Skip header
-    #     index = 0
-    #     count = 0
-    #     for row in reader:
-    #         if count > len(new_u_val):
-    #             break
-    #         if index % 100 == 0: # 0.001 -> 0.1s
-    #             count += 1
-    #             # Each x_data row has 4 values
-    #             x_val.append([[float(row[0])], [float(row[1])], [float(row[2])], [float(row[3])]])
-    #         index += 1
 
     with open(data_path, mode='r', encoding='utf-8') as file:
         reader = csv.reader(file)
@@ -56,12 +26,10 @@ def getInputData(data_path):
 
     train_size = int(0.8 * len(u_val))
     train_u = u_val[:train_size]
-    # train_y = y_val[:train_size]
     train_x = x_val[:train_size]
     train_x_next = x_next_val[:train_size]
 
     test_u = u_val[train_size:]
-    # test_y = y_val[train_size:]
     test_x = x_val[train_size:]
     test_x_next = x_next_val[train_size:]
 
@@ -75,9 +43,7 @@ def loadConfig():
 
 def computeTarget(u_tensor, x_data, A, B, dt=0.01):
     x_dot = torch.bmm(A, x_data) + torch.bmm(B, u_tensor)  # x' = Ax + Bu
-    # y_pred = torch.bmm(C, x_data) + torch.bmm(D, u_tensor.unsqueeze(2))  # y = Cx + Du
     next_x = x_data + x_dot * dt  # Euler integration: x_next = x + x' * dt
-    # y_pred = y_pred.squeeze(2)  # reshape y_pred to match y_tensor
 
     return next_x
 
@@ -101,5 +67,5 @@ def angleToDegree(data):
     angles_degrees = np.degrees(angles)
     angles_degrees = (angles_degrees + 360) % 360  # Normalize to [0, 360)
     data[:, 2, :] = angles_degrees
-    data[:, 3, :] = 0  # Optionally set the cosine component to zero or remove it
+    data[:, 3, :] = 0  # set the cosine component to zero
     return data

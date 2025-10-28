@@ -1,5 +1,5 @@
 # state space model based neural network model for car state prediction
-# input: u & x, output: 4 matrix A, B, C, D defining the state space model
+# input: u & x, output: 4 matrix A, B defining the state space model
 import torch
 import torch.nn as nn
 
@@ -31,7 +31,5 @@ class CarPredictor(nn.Module):
 
         A = outputs[:, :self.x_size * self.x_size].reshape(-1, self.x_size, self.x_size)
         B = outputs[:, self.x_size * self.x_size:self.x_size * self.x_size + self.x_size * self.u_size].reshape(-1, self.x_size, self.u_size)
-        # C = outputs[:, self.x_size * self.x_size + self.x_size * self.u_size:self.x_size * self.x_size + self.x_size * self.u_size + self.u_size * self.x_size].reshape(-1, self.u_size, self.x_size)
-        # D = outputs[:, -self.u_size:].reshape(-1, self.u_size, self.u_size)
 
         return A, B
