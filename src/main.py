@@ -42,9 +42,7 @@ def trainModel(model, u_tensor, x_tensor, x_next_tensor, epochs=100, learning_ra
             optimizer.zero_grad()
             A, B = model(batch_u, batch_x)
             next_x_pred = computeTarget(batch_u, batch_x, A, B)
-            # loss_1 = criterion(y_pred, batch_y)
-            loss_2 = criterion(next_x_pred, batch_x_next)
-            loss = loss_2
+            loss = criterion(next_x_pred, batch_x_next)
             loss.backward()
             optimizer.step()
             writer.add_scalar('Loss/train', loss.item(), epoch+1)
@@ -73,7 +71,6 @@ def runInference(model, u_tensor, x_tensor, x_next_tensor, x_scaler, name="model
             A, B = model(u_tensor[i:i+1], x_tensor[i:i+1])
             next_x_pred = computeTarget(u_tensor[i:i+1], x_tensor[i:i+1], A, B)
             x_pred_list.append(next_x_pred)
-            # x_t = next_x_pred  # update state for next time step
 
     x_pred = torch.cat(x_pred_list, dim=0)
     x_pred = x_pred.cpu().numpy()
@@ -88,8 +85,6 @@ def runInference(model, u_tensor, x_tensor, x_next_tensor, x_scaler, name="model
     difference = x_pred - x_next_tensor
     print(x_pred)
     print(x_next_tensor)
-
-    difference = x_pred - x_next_tensor
     print(difference)
 
     # plot all in one figure
