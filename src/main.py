@@ -25,8 +25,9 @@ def trainModel(model, u_tensor, x_tensor, x_next_tensor, epochs=100, learning_ra
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    x_tensor = x_tensor.to(device)
     u_tensor = u_tensor.to(device)
+    x_tensor = x_tensor.to(device)
+    input_tensor = torch.cat((u_tensor, x_tensor), dim=1) # concatenate u and x for input
     x_next_tensor = x_next_tensor.to(device)
     log_dir = os.path.join(os.path.dirname(__file__), '..', 'logs', name)
     os.makedirs(log_dir, exist_ok=True)
@@ -36,11 +37,12 @@ def trainModel(model, u_tensor, x_tensor, x_next_tensor, epochs=100, learning_ra
         for i in range(0, u_tensor.size(0), 32):  # mini-batch training
             batch_u = u_tensor[i:i+32]
             batch_x = x_tensor[i:i+32]
+            batch_input = input_tensor[i:i+32]
             batch_x_next = x_next_tensor[i:i+32]
 
             model.train()
             optimizer.zero_grad()
-            A, B = model(batch_u, batch_x)
+            A, B = model(batch_input)
             next_x_pred = computeTarget(batch_u, batch_x, A, B)
             loss = criterion(next_x_pred, batch_x_next)
             loss.backward()
@@ -62,13 +64,14 @@ def runInference(model, u_tensor, x_tensor, x_next_tensor, x_scaler, name="model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
     model.eval()
-    x_tensor = x_tensor.to(device)
     u_tensor = u_tensor.to(device)
+    x_tensor = x_tensor.to(device)
+    input_tensor = torch.cat((u_tensor, x_tensor), dim=1)
     x_pred_list = []
 
     with torch.no_grad():
         for i in range(u_tensor.size(0)):  # time steps
-            A, B = model(u_tensor[i:i+1], x_tensor[i:i+1])
+            A, B = model(input_tensor[i:i+1])
             next_x_pred = computeTarget(u_tensor[i:i+1], x_tensor[i:i+1], A, B)
             x_pred_list.append(next_x_pred)
 
